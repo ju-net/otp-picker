@@ -5,6 +5,12 @@ export interface AuthStatus {
   email: string | null
 }
 
+export interface UpdateStatus {
+  status: 'downloading' | 'error' | 'ready'
+  message?: string
+  percent?: number
+}
+
 export interface ElectronAPI {
   // Settings
   loadSettings: () => Promise<Settings | null>
@@ -31,6 +37,11 @@ export interface ElectronAPI {
   // Accessibility
   checkAccessibility: () => Promise<boolean>
   requestAccessibility: () => Promise<boolean>
+
+  // Updates
+  checkForUpdates: () => Promise<void>
+  getAppVersion: () => Promise<string>
+  onUpdateStatus: (callback: (status: UpdateStatus) => void) => void
 
   // Events
   onShowWindow: (callback: () => void) => void

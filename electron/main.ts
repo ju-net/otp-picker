@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain, clipboard, screen, systemPreferences, shel
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { setupTray } from './tray'
+import { initAutoUpdater, checkForUpdates, getAppVersion } from './updater'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -87,8 +88,15 @@ function showWindow() {
 }
 
 app.whenReady().then(() => {
-  createWindow()
+  const win = createWindow()
   setupTray(showWindow, () => app.quit())
+
+  // Initialize auto-updater
+  initAutoUpdater(win)
+  // Check for updates after a short delay
+  setTimeout(() => {
+    checkForUpdates()
+  }, 3000)
 
   const settings = loadSettings()
   setupHotkey(settings.hotkey, showWindow)
@@ -148,6 +156,15 @@ app.whenReady().then(() => {
     }
     // Windows/Linuxでは常にtrue
     return true
+  })
+
+  // アップデート関連
+  ipcMain.handle('check-for-updates', () => {
+    checkForUpdates()
+  })
+
+  ipcMain.handle('get-app-version', () => {
+    return getAppVersion()
   })
 
   // アクセシビリティ設定を開く

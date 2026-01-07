@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useSettingsStore } from '../store/settings'
 import KeywordManager from './KeywordManager'
+import type { UpdateStatus } from '../types/electron'
 
 interface SettingsProps {
   onClose: () => void
@@ -30,6 +31,8 @@ function Settings({ onClose }: SettingsProps) {
   const [isRecordingHotkey, setIsRecordingHotkey] = useState(false)
   const [localHotkey, setLocalHotkey] = useState(hotkey)
   const [hasAccessibility, setHasAccessibility] = useState(true)
+  const [appVersion, setAppVersion] = useState('')
+  const [updateStatus, setUpdateStatus] = useState<UpdateStatus | null>(null)
 
   useEffect(() => {
     // アクセシビリティ権限をチェック
@@ -38,6 +41,18 @@ function Settings({ onClose }: SettingsProps) {
       setHasAccessibility(result ?? true)
     }
     checkPermission()
+
+    // アプリバージョンを取得
+    const fetchVersion = async () => {
+      const version = await window.electronAPI?.getAppVersion()
+      if (version) setAppVersion(version)
+    }
+    fetchVersion()
+
+    // アップデートステータスのリスナー
+    window.electronAPI?.onUpdateStatus((status) => {
+      setUpdateStatus(status)
+    })
   }, [])
 
   const handleRequestAccessibility = async () => {
@@ -258,9 +273,9 @@ function Settings({ onClose }: SettingsProps) {
           </div>
         </section>
 
-        {/* 自動更新 */}
+        {/* OTPリスト自動更新 */}
         <section>
-          <h2 className="text-sm font-semibold text-gray-700 mb-3">自動更新</h2>
+          <h2 className="text-sm font-semibold text-gray-700 mb-3">OTPリスト自動更新</h2>
           <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
             <label className="flex items-center">
               <input
@@ -283,6 +298,45 @@ function Settings({ onClose }: SettingsProps) {
                   <option value={30}>30秒</option>
                   <option value={60}>1分</option>
                 </select>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* アプリについて */}
+        <section>
+          <h2 className="text-sm font-semibold text-gray-700 mb-3">アプリについて</h2>
+          <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-700">バージョン</span>
+              <span className="text-sm text-gray-900 font-mono">{appVersion || '-'}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-700">アップデート</span>
+              <button
+                onClick={() => window.electronAPI?.checkForUpdates()}
+                className="text-sm bg-blue-600 text-white py-1.5 px-3 rounded-md hover:bg-blue-700 transition-colors"
+              >
+                更新を確認
+              </button>
+            </div>
+            {updateStatus && (
+              <div className={`p-2 rounded-lg text-sm ${
+                updateStatus.status === 'error'
+                  ? 'bg-red-50 text-red-700 border border-red-200'
+                  : updateStatus.status === 'downloading'
+                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                  : 'bg-green-50 text-green-700 border border-green-200'
+              }`}>
+                {updateStatus.message}
+                {updateStatus.percent !== undefined && (
+                  <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-blue-600 h-2 rounded-full transition-all"
+                      style={{ width: `${updateStatus.percent}%` }}
+                    />
+                  </div>
+                )}
               </div>
             )}
           </div>

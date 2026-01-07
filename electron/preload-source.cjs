@@ -29,6 +29,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   checkAccessibility: () => ipcRenderer.invoke('check-accessibility'),
   requestAccessibility: () => ipcRenderer.invoke('request-accessibility'),
 
+  // Updates
+  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+  onUpdateStatus: (callback) => {
+    ipcRenderer.on('update-status', (_, status) => callback(status))
+  },
+
   // Events
   onShowWindow: (callback) => {
     ipcRenderer.on('show-window', callback)
