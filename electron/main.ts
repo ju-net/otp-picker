@@ -152,7 +152,12 @@ app.whenReady().then(() => {
   // アクセシビリティ権限チェック
   ipcMain.handle('check-accessibility', () => {
     if (process.platform === 'darwin') {
-      return systemPreferences.isTrustedAccessibilityClient(false)
+      const result = systemPreferences.isTrustedAccessibilityClient(false)
+      console.log('=== Accessibility Check ===')
+      console.log('Bundle ID:', app.isPackaged ? 'packaged app' : 'development')
+      console.log('App Path:', app.getAppPath())
+      console.log('isTrustedAccessibilityClient:', result)
+      return result
     }
     // Windows/Linuxでは常にtrue
     return true
@@ -205,13 +210,12 @@ app.whenReady().then(() => {
 
     try {
       if (process.platform === 'darwin') {
-        // macOS: AppleScript
-        const escaped = text
-          .replace(/\\/g, '\\\\')
-          .replace(/"/g, '\\"')
-        console.log('Executing AppleScript for text:', text)
-        const result = await execAsync(`osascript -e 'tell application "System Events" to keystroke "${escaped}"'`)
-        console.log('AppleScript result:', result)
+        // macOS: クリップボード経由で Cmd+V をシミュレート
+        // これはkeystrokeよりも信頼性が高い
+        clipboard.writeText(text)
+        await new Promise(resolve => setTimeout(resolve, 100))
+        console.log('Executing paste via AppleScript')
+        await execAsync(`osascript -e 'tell application "System Events" to keystroke "v" using command down'`)
         return { success: true }
       } else if (process.platform === 'win32') {
         // Windows: PowerShell + SendKeys
