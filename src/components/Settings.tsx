@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSettingsStore } from '../store/settings'
 import KeywordManager from './KeywordManager'
 
@@ -29,6 +29,25 @@ function Settings({ onClose }: SettingsProps) {
   const [localClientSecret, setLocalClientSecret] = useState(googleClientSecret)
   const [isRecordingHotkey, setIsRecordingHotkey] = useState(false)
   const [localHotkey, setLocalHotkey] = useState(hotkey)
+  const [hasAccessibility, setHasAccessibility] = useState(true)
+
+  useEffect(() => {
+    // アクセシビリティ権限をチェック
+    const checkPermission = async () => {
+      const result = await window.electronAPI?.checkAccessibility()
+      setHasAccessibility(result ?? true)
+    }
+    checkPermission()
+  }, [])
+
+  const handleRequestAccessibility = async () => {
+    await window.electronAPI?.requestAccessibility()
+    // 少し待ってから再チェック
+    setTimeout(async () => {
+      const result = await window.electronAPI?.checkAccessibility()
+      setHasAccessibility(result ?? true)
+    }, 1000)
+  }
 
   const handleSaveOAuth = () => {
     setGoogleClientId(localClientId)
@@ -210,6 +229,32 @@ function Settings({ onClose }: SettingsProps) {
               />
               <span className="text-sm text-gray-700">毎回確認する</span>
             </label>
+
+            {/* アクセシビリティ権限警告（macOS） */}
+            {inputMethod === 'typing' && !hasAccessibility && (
+              <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-sm text-yellow-800 mb-2">
+                  自動入力にはアクセシビリティ権限が必要です
+                </p>
+                <button
+                  onClick={handleRequestAccessibility}
+                  className="text-sm bg-yellow-600 text-white py-1.5 px-3 rounded-md hover:bg-yellow-700 transition-colors"
+                >
+                  権限を設定
+                </button>
+              </div>
+            )}
+
+            {inputMethod === 'typing' && hasAccessibility && (
+              <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-sm text-green-700 flex items-center">
+                  <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  権限が許可されています
+                </p>
+              </div>
+            )}
           </div>
         </section>
 

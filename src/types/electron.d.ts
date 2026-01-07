@@ -28,6 +28,10 @@ export interface ElectronAPI {
   // Window
   hideWindow: () => Promise<void>
 
+  // Accessibility
+  checkAccessibility: () => Promise<boolean>
+  requestAccessibility: () => Promise<boolean>
+
   // Events
   onShowWindow: (callback: () => void) => void
   onOTPSelected: (callback: (code: string) => void) => void

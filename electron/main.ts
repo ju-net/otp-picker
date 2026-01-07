@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, clipboard, screen } from 'electron'
+import { app, BrowserWindow, ipcMain, clipboard, screen, systemPreferences, shell } from 'electron'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { setupTray } from './tray'
@@ -38,11 +38,15 @@ function createWindow() {
     },
   })
 
-  // macOSでフルスクリーンアプリの上にも表示
+  // プラットフォーム別の設定
   if (process.platform === 'darwin') {
+    // macOS: フルスクリーンアプリの上にも表示
     mainWindow.setAlwaysOnTop(true, 'pop-up-menu', 1)
     mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
-    app.dock.hide() // Dockアイコンを非表示
+    app.dock.hide()
+  } else if (process.platform === 'win32') {
+    // Windows: 常に最前面
+    mainWindow.setAlwaysOnTop(true, 'screen-saver')
   }
 
   if (VITE_DEV_SERVER_URL) {
@@ -137,6 +141,29 @@ app.whenReady().then(() => {
     mainWindow?.hide()
   })
 
+  // アクセシビリティ権限チェック
+  ipcMain.handle('check-accessibility', () => {
+    if (process.platform === 'darwin') {
+      return systemPreferences.isTrustedAccessibilityClient(false)
+    }
+    // Windows/Linuxでは常にtrue
+    return true
+  })
+
+  // アクセシビリティ設定を開く
+  ipcMain.handle('request-accessibility', () => {
+    if (process.platform === 'darwin') {
+      // 権限ダイアログを表示（プロンプト付き）
+      const isTrusted = systemPreferences.isTrustedAccessibilityClient(true)
+      if (!isTrusted) {
+        // システム環境設定を開く
+        shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility')
+      }
+      return isTrusted
+    }
+    return true
+  })
+
   ipcMain.handle('type-text', async (_, text: string) => {
     // Hide window first to focus on the previous app
     mainWindow?.hide()
@@ -144,26 +171,31 @@ app.whenReady().then(() => {
     // Small delay to let the previous window focus
     await new Promise(resolve => setTimeout(resolve, 200))
 
-    // Use AppleScript on macOS to type text
-    if (process.platform === 'darwin') {
-      const { exec } = await import('child_process')
-      const { promisify } = await import('util')
-      const execAsync = promisify(exec)
+    const { exec } = await import('child_process')
+    const { promisify } = await import('util')
+    const execAsync = promisify(exec)
 
-      try {
-        // エスケープ処理を強化
+    try {
+      if (process.platform === 'darwin') {
+        // macOS: AppleScript
         const escaped = text
           .replace(/\\/g, '\\\\')
           .replace(/"/g, '\\"')
-
         await execAsync(`osascript -e 'tell application "System Events" to keystroke "${escaped}"'`)
-      } catch (error) {
-        console.error('Failed to type text:', error)
-        // フォールバック：クリップボードにコピー
-        clipboard.writeText(text)
+      } else if (process.platform === 'win32') {
+        // Windows: PowerShell + SendKeys
+        const escaped = text
+          .replace(/'/g, "''")
+          .replace(/`/g, '``')
+        await execAsync(`powershell -Command "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('${escaped}')"`)
+      } else {
+        // Linux: xdotool (if available)
+        const escaped = text.replace(/'/g, "'\\''")
+        await execAsync(`xdotool type '${escaped}'`)
       }
-    } else {
-      // Windows/Linux: クリップボードにコピー
+    } catch (error) {
+      console.error('Failed to type text:', error)
+      // フォールバック：クリップボードにコピー
       clipboard.writeText(text)
     }
   })

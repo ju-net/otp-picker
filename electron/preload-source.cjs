@@ -25,6 +25,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Window
   hideWindow: () => ipcRenderer.invoke('hide-window'),
 
+  // Accessibility
+  checkAccessibility: () => ipcRenderer.invoke('check-accessibility'),
+  requestAccessibility: () => ipcRenderer.invoke('request-accessibility'),
+
   // Events
   onShowWindow: (callback) => {
     ipcRenderer.on('show-window', callback)
