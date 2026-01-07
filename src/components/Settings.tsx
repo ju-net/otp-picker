@@ -1,0 +1,250 @@
+import { useState } from 'react'
+import { useSettingsStore } from '../store/settings'
+import KeywordManager from './KeywordManager'
+
+interface SettingsProps {
+  onClose: () => void
+}
+
+function Settings({ onClose }: SettingsProps) {
+  const {
+    googleClientId,
+    googleClientSecret,
+    hotkey,
+    inputMethod,
+    autoRefresh,
+    refreshInterval,
+    isAuthenticated,
+    userEmail,
+    setGoogleClientId,
+    setGoogleClientSecret,
+    setHotkey,
+    setInputMethod,
+    setAutoRefresh,
+    setRefreshInterval,
+    setAuthenticated,
+  } = useSettingsStore()
+
+  const [localClientId, setLocalClientId] = useState(googleClientId)
+  const [localClientSecret, setLocalClientSecret] = useState(googleClientSecret)
+  const [isRecordingHotkey, setIsRecordingHotkey] = useState(false)
+  const [localHotkey, setLocalHotkey] = useState(hotkey)
+
+  const handleSaveOAuth = () => {
+    setGoogleClientId(localClientId)
+    setGoogleClientSecret(localClientSecret)
+  }
+
+  const handleLogout = async () => {
+    await window.electronAPI?.logout()
+    setAuthenticated(false, null)
+  }
+
+  const handleHotkeyKeyDown = (e: React.KeyboardEvent) => {
+    if (!isRecordingHotkey) return
+
+    e.preventDefault()
+
+    const modifiers: string[] = []
+    if (e.metaKey || e.ctrlKey) modifiers.push('CommandOrControl')
+    if (e.altKey) modifiers.push('Alt')
+    if (e.shiftKey) modifiers.push('Shift')
+
+    const key = e.key.length === 1 ? e.key.toUpperCase() : e.key
+
+    if (key === 'Control' || key === 'Meta' || key === 'Alt' || key === 'Shift') {
+      return
+    }
+
+    const newHotkey = [...modifiers, key].join('+')
+    setLocalHotkey(newHotkey)
+    setIsRecordingHotkey(false)
+  }
+
+  const handleSaveHotkey = () => {
+    setHotkey(localHotkey)
+  }
+
+  return (
+    <div className="p-4 h-full flex flex-col">
+      <div className="flex items-center mb-4 drag-region flex-shrink-0">
+        <button
+          onClick={onClose}
+          className="mr-3 text-gray-500 hover:text-gray-700 no-drag"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <h1 className="text-lg font-semibold text-gray-900">設定</h1>
+      </div>
+
+      <div className="space-y-6 flex-1 overflow-y-auto">
+        {/* Google OAuth設定 */}
+        <section>
+          <h2 className="text-sm font-semibold text-gray-700 mb-3">Google OAuth設定</h2>
+          <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">Client ID</label>
+              <input
+                type="text"
+                value={localClientId}
+                onChange={(e) => setLocalClientId(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">Client Secret</label>
+              <input
+                type="password"
+                value={localClientSecret}
+                onChange={(e) => setLocalClientSecret(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <button
+              onClick={handleSaveOAuth}
+              disabled={localClientId === googleClientId && localClientSecret === googleClientSecret}
+              className="text-sm bg-blue-600 text-white py-1.5 px-3 rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+              保存
+            </button>
+          </div>
+        </section>
+
+        {/* アカウント */}
+        <section>
+          <h2 className="text-sm font-semibold text-gray-700 mb-3">Googleアカウント</h2>
+          <div className="bg-white border border-gray-200 rounded-lg p-4">
+            {isAuthenticated ? (
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-900">{userEmail}</p>
+                  <p className="text-xs text-green-600">ログイン中</p>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="text-sm text-red-600 hover:text-red-700"
+                >
+                  ログアウト
+                </button>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">未ログイン</p>
+            )}
+          </div>
+        </section>
+
+        {/* ホットキー */}
+        <section>
+          <h2 className="text-sm font-semibold text-gray-700 mb-3">ホットキー</h2>
+          <div className="bg-white border border-gray-200 rounded-lg p-4">
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={localHotkey}
+                onKeyDown={handleHotkeyKeyDown}
+                onFocus={() => setIsRecordingHotkey(true)}
+                onBlur={() => setIsRecordingHotkey(false)}
+                readOnly
+                className={`flex-1 px-3 py-2 text-sm border rounded-md focus:outline-none ${
+                  isRecordingHotkey
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-300'
+                }`}
+                placeholder="クリックしてキーを入力"
+              />
+              <button
+                onClick={handleSaveHotkey}
+                disabled={localHotkey === hotkey}
+                className="text-sm bg-blue-600 text-white py-2 px-3 rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                保存
+              </button>
+            </div>
+            {isRecordingHotkey && (
+              <p className="text-xs text-blue-600 mt-2">
+                ホットキーを入力してください...
+              </p>
+            )}
+          </div>
+        </section>
+
+        {/* OTPキーワード */}
+        <section>
+          <h2 className="text-sm font-semibold text-gray-700 mb-3">OTP検索キーワード</h2>
+          <KeywordManager />
+        </section>
+
+        {/* 入力方法 */}
+        <section>
+          <h2 className="text-sm font-semibold text-gray-700 mb-3">OTPコード入力方法</h2>
+          <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-2">
+            <label className="flex items-center">
+              <input
+                type="radio"
+                name="inputMethod"
+                checked={inputMethod === 'clipboard'}
+                onChange={() => setInputMethod('clipboard')}
+                className="mr-2"
+              />
+              <span className="text-sm text-gray-700">クリップボードにコピー</span>
+            </label>
+            <label className="flex items-center">
+              <input
+                type="radio"
+                name="inputMethod"
+                checked={inputMethod === 'typing'}
+                onChange={() => setInputMethod('typing')}
+                className="mr-2"
+              />
+              <span className="text-sm text-gray-700">自動入力（タイピング）</span>
+            </label>
+            <label className="flex items-center">
+              <input
+                type="radio"
+                name="inputMethod"
+                checked={inputMethod === 'ask'}
+                onChange={() => setInputMethod('ask')}
+                className="mr-2"
+              />
+              <span className="text-sm text-gray-700">毎回確認する</span>
+            </label>
+          </div>
+        </section>
+
+        {/* 自動更新 */}
+        <section>
+          <h2 className="text-sm font-semibold text-gray-700 mb-3">自動更新</h2>
+          <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                checked={autoRefresh}
+                onChange={(e) => setAutoRefresh(e.target.checked)}
+                className="mr-2"
+              />
+              <span className="text-sm text-gray-700">自動更新を有効にする</span>
+            </label>
+            {autoRefresh && (
+              <div className="flex items-center gap-2">
+                <label className="text-sm text-gray-600">更新間隔:</label>
+                <select
+                  value={refreshInterval}
+                  onChange={(e) => setRefreshInterval(Number(e.target.value))}
+                  className="px-2 py-1 text-sm border border-gray-300 rounded-md"
+                >
+                  <option value={15}>15秒</option>
+                  <option value={30}>30秒</option>
+                  <option value={60}>1分</option>
+                </select>
+              </div>
+            )}
+          </div>
+        </section>
+      </div>
+    </div>
+  )
+}
+
+export default Settings
