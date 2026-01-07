@@ -182,11 +182,22 @@ app.whenReady().then(() => {
   })
 
   ipcMain.handle('type-text', async (_, text: string) => {
+    // Check accessibility permission first on macOS
+    if (process.platform === 'darwin') {
+      const hasPermission = systemPreferences.isTrustedAccessibilityClient(false)
+      console.log('Accessibility permission:', hasPermission)
+      if (!hasPermission) {
+        console.log('No accessibility permission, falling back to clipboard')
+        clipboard.writeText(text)
+        return { success: false, reason: 'no-permission' }
+      }
+    }
+
     // Hide window first to focus on the previous app
     mainWindow?.hide()
 
     // Small delay to let the previous window focus
-    await new Promise(resolve => setTimeout(resolve, 200))
+    await new Promise(resolve => setTimeout(resolve, 300))
 
     const { exec } = await import('child_process')
     const { promisify } = await import('util')
@@ -198,22 +209,28 @@ app.whenReady().then(() => {
         const escaped = text
           .replace(/\\/g, '\\\\')
           .replace(/"/g, '\\"')
-        await execAsync(`osascript -e 'tell application "System Events" to keystroke "${escaped}"'`)
+        console.log('Executing AppleScript for text:', text)
+        const result = await execAsync(`osascript -e 'tell application "System Events" to keystroke "${escaped}"'`)
+        console.log('AppleScript result:', result)
+        return { success: true }
       } else if (process.platform === 'win32') {
         // Windows: PowerShell + SendKeys
         const escaped = text
           .replace(/'/g, "''")
           .replace(/`/g, '``')
         await execAsync(`powershell -Command "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('${escaped}')"`)
+        return { success: true }
       } else {
         // Linux: xdotool (if available)
         const escaped = text.replace(/'/g, "'\\''")
         await execAsync(`xdotool type '${escaped}'`)
+        return { success: true }
       }
     } catch (error) {
       console.error('Failed to type text:', error)
       // フォールバック：クリップボードにコピー
       clipboard.writeText(text)
+      return { success: false, reason: 'error', error: String(error) }
     }
   })
 

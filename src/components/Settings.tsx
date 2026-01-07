@@ -251,12 +251,26 @@ function Settings({ onClose }: SettingsProps) {
                 <p className="text-sm text-yellow-800 mb-2">
                   自動入力にはアクセシビリティ権限が必要です
                 </p>
-                <button
-                  onClick={handleRequestAccessibility}
-                  className="text-sm bg-yellow-600 text-white py-1.5 px-3 rounded-md hover:bg-yellow-700 transition-colors"
-                >
-                  権限を設定
-                </button>
+                <p className="text-xs text-yellow-700 mb-2">
+                  権限を付与した後、アプリを再起動してください
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleRequestAccessibility}
+                    className="text-sm bg-yellow-600 text-white py-1.5 px-3 rounded-md hover:bg-yellow-700 transition-colors"
+                  >
+                    権限を設定
+                  </button>
+                  <button
+                    onClick={async () => {
+                      const result = await window.electronAPI?.checkAccessibility()
+                      setHasAccessibility(result ?? true)
+                    }}
+                    className="text-sm bg-gray-500 text-white py-1.5 px-3 rounded-md hover:bg-gray-600 transition-colors"
+                  >
+                    再確認
+                  </button>
+                </div>
               </div>
             )}
 
