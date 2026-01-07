@@ -66,7 +66,7 @@ jobs:
           path: |
             release/*.dmg
             release/*.zip
-            release/*.yml
+            release/latest-mac.yml
 
       - name: Upload Windows artifacts
         if: matrix.platform == 'win'
@@ -75,7 +75,7 @@ jobs:
           name: windows-build
           path: |
             release/*.exe
-            release/*.yml
+            release/latest.yml
 
       - name: Upload Linux artifacts
         if: matrix.platform == 'linux'
@@ -85,7 +85,7 @@ jobs:
           path: |
             release/*.AppImage
             release/*.deb
-            release/*.yml
+            release/latest-linux.yml
 
   release:
     needs: build
@@ -115,7 +115,7 @@ jobs:
             artifacts/**/*.exe
             artifacts/**/*.AppImage
             artifacts/**/*.deb
-            artifacts/**/*.yml
+            artifacts/**/latest*.yml
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
