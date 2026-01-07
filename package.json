@@ -2,6 +2,10 @@
   "name": "otp-picker",
   "version": "0.1.1",
   "description": "Gmail OTP code picker desktop application",
+  "author": {
+    "name": "ju-net",
+    "email": "dev@ju-net.jp"
+  },
   "type": "module",
   "main": "dist-electron/main.js",
   "repository": {
