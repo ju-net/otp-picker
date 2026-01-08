@@ -31,3 +31,5 @@ coverage/
 # Cache
 .cache/
 .parcel-cache/
+
+.certs
