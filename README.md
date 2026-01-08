@@ -9,6 +9,7 @@ GmailからOTP（ワンタイムパスワード）コードを取得し、素早
 - **自動OTP抽出**: メール本文から認証コードを自動抽出
 - **柔軟な入力方法**: クリップボードコピーまたは自動タイピング
 - **カスタムキーワード**: OTP検索用のキーワードを自由に設定
+- **自動アップデート**: 新しいバージョンを自動検出・更新
 - **クロスプラットフォーム**: macOS / Windows / Linux 対応
 
 ## インストール
@@ -22,15 +23,7 @@ GmailからOTP（ワンタイムパスワード）コードを取得し、素早
 | Windows | `OTP Picker Setup x.x.x.exe` |
 | Linux | `OTP Picker-x.x.x.AppImage` または `otp-picker_x.x.x_amd64.deb` |
 
-### macOS での注意事項
-
-初回起動時に「"OTP Picker.app"は壊れているため開けません」と表示される場合があります。これは未署名アプリに対するmacOSのセキュリティ機能によるものです。
-
-以下のコマンドをターミナルで実行してから起動してください:
-
-```bash
-xattr -cr /Applications/OTP\ Picker.app
-```
+> macOS版はApple Developer IDで署名・公証済みのため、警告なしでインストールできます。
 
 ## セットアップ
 
