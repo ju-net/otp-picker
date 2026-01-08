@@ -1,17 +1,23 @@
 import { autoUpdater } from 'electron-updater'
-import { BrowserWindow, dialog, app } from 'electron'
+import { BrowserWindow, dialog, app, shell } from 'electron'
 
 let mainWindow: BrowserWindow | null = null
+const RELEASES_URL = 'https://github.com/ju-net/otp-picker/releases/latest'
 
 export function initAutoUpdater(window: BrowserWindow) {
   mainWindow = window
 
-  // ログを有効化
+  // ログを有効化（詳細レベル）
   autoUpdater.logger = console
+  autoUpdater.logger.transports = ['console']
 
   // 自動ダウンロードを無効化（ユーザーに確認してから）
   autoUpdater.autoDownload = false
   autoUpdater.autoInstallOnAppQuit = true
+
+  console.log('=== Auto Updater Initialized ===')
+  console.log('Current version:', app.getVersion())
+  console.log('Platform:', process.platform)
 
   // アップデートが利用可能
   autoUpdater.on('update-available', (info) => {
@@ -26,7 +32,12 @@ export function initAutoUpdater(window: BrowserWindow) {
       cancelId: 1,
     }).then((result) => {
       if (result.response === 0) {
-        autoUpdater.downloadUpdate()
+        console.log('Starting download...')
+        autoUpdater.downloadUpdate().then(() => {
+          console.log('Download started successfully')
+        }).catch((err) => {
+          console.error('Download failed to start:', err)
+        })
         mainWindow?.webContents.send('update-status', {
           status: 'downloading',
           message: 'アップデートをダウンロード中...'
@@ -73,7 +84,22 @@ export function initAutoUpdater(window: BrowserWindow) {
     console.error('Auto-updater error:', error)
     mainWindow?.webContents.send('update-status', {
       status: 'error',
-      message: 'アップデートの確認に失敗しました'
+      message: 'アップデートに失敗しました'
+    })
+
+    // エラー時はダウンロードページを開くオプションを表示
+    dialog.showMessageBox(mainWindow!, {
+      type: 'error',
+      title: 'アップデートエラー',
+      message: '自動アップデートに失敗しました。\n\n手動でダウンロードページを開きますか？',
+      detail: error.message,
+      buttons: ['ダウンロードページを開く', '閉じる'],
+      defaultId: 0,
+      cancelId: 1,
+    }).then((result) => {
+      if (result.response === 0) {
+        shell.openExternal(RELEASES_URL)
+      }
     })
   })
 }
