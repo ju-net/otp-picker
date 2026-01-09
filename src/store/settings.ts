@@ -14,6 +14,7 @@ export interface Settings {
   hotkey: string
   keywords: string[]
   inputMethod: 'clipboard' | 'typing' | 'ask'
+  autoEnterAfterType: boolean
   autoRefresh: boolean
   refreshInterval: number
 }
@@ -29,6 +30,7 @@ interface SettingsState extends Settings {
   addKeyword: (keyword: string) => void
   removeKeyword: (keyword: string) => void
   setInputMethod: (method: 'clipboard' | 'typing' | 'ask') => void
+  setAutoEnterAfterType: (enabled: boolean) => void
   setAutoRefresh: (enabled: boolean) => void
   setRefreshInterval: (seconds: number) => void
   setAuthenticated: (authenticated: boolean, email?: string | null) => void
@@ -44,6 +46,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   hotkey: 'CommandOrControl+Shift+O',
   keywords: ['verification code', 'OTP', '認証コード', '確認コード'],
   inputMethod: 'clipboard',
+  autoEnterAfterType: false,
   autoRefresh: true,
   refreshInterval: 30,
   isAuthenticated: false,
@@ -91,6 +94,11 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     get().saveSettings()
   },
 
+  setAutoEnterAfterType: (autoEnterAfterType) => {
+    set({ autoEnterAfterType })
+    get().saveSettings()
+  },
+
   setAutoRefresh: (autoRefresh) => {
     set({ autoRefresh })
     get().saveSettings()
@@ -118,6 +126,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         hotkey: settings.hotkey || 'CommandOrControl+Shift+O',
         keywords: settings.keywords || ['verification code', 'OTP', '認証コード', '確認コード'],
         inputMethod: settings.inputMethod || 'clipboard',
+        autoEnterAfterType: settings.autoEnterAfterType ?? false,
         autoRefresh: settings.autoRefresh ?? true,
         refreshInterval: settings.refreshInterval || 30,
       })
@@ -131,13 +140,14 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   },
 
   saveSettings: async () => {
-    const { googleClientId, googleClientSecret, hotkey, keywords, inputMethod, autoRefresh, refreshInterval } = get()
+    const { googleClientId, googleClientSecret, hotkey, keywords, inputMethod, autoEnterAfterType, autoRefresh, refreshInterval } = get()
     await window.electronAPI?.saveSettings({
       googleClientId,
       googleClientSecret,
       hotkey,
       keywords,
       inputMethod,
+      autoEnterAfterType,
       autoRefresh,
       refreshInterval,
     })

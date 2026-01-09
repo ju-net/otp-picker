@@ -13,6 +13,7 @@ function Settings({ onClose }: SettingsProps) {
     googleClientSecret,
     hotkey,
     inputMethod,
+    autoEnterAfterType,
     autoRefresh,
     refreshInterval,
     isAuthenticated,
@@ -21,6 +22,7 @@ function Settings({ onClose }: SettingsProps) {
     setGoogleClientSecret,
     setHotkey,
     setInputMethod,
+    setAutoEnterAfterType,
     setAutoRefresh,
     setRefreshInterval,
     setAuthenticated,
@@ -283,6 +285,19 @@ function Settings({ onClose }: SettingsProps) {
                   権限が許可されています
                 </p>
               </div>
+            )}
+
+            {/* 自動入力後にEnterを押す */}
+            {inputMethod === 'typing' && (
+              <label className="flex items-center mt-3 pt-3 border-t border-gray-200">
+                <input
+                  type="checkbox"
+                  checked={autoEnterAfterType}
+                  onChange={(e) => setAutoEnterAfterType(e.target.checked)}
+                  className="mr-2"
+                />
+                <span className="text-sm text-gray-700">入力後にEnterキーを押す</span>
+              </label>
             )}
           </div>
         </section>

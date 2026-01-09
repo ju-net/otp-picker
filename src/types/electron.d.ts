@@ -29,7 +29,7 @@ export interface ElectronAPI {
 
   // Input
   copyToClipboard: (text: string) => Promise<void>
-  typeText: (text: string) => Promise<void>
+  typeText: (text: string, options?: { autoEnter?: boolean }) => Promise<void>
 
   // Window
   hideWindow: () => Promise<void>

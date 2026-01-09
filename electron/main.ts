@@ -186,7 +186,9 @@ app.whenReady().then(() => {
     return true
   })
 
-  ipcMain.handle('type-text', async (_, text: string) => {
+  ipcMain.handle('type-text', async (_, text: string, options?: { autoEnter?: boolean }) => {
+    const autoEnter = options?.autoEnter ?? false
+
     // Check accessibility permission first on macOS
     if (process.platform === 'darwin') {
       const hasPermission = systemPreferences.isTrustedAccessibilityClient(false)
@@ -211,23 +213,32 @@ app.whenReady().then(() => {
     try {
       if (process.platform === 'darwin') {
         // macOS: クリップボード経由で Cmd+V をシミュレート
-        // これはkeystrokeよりも信頼性が高い
         clipboard.writeText(text)
         await new Promise(resolve => setTimeout(resolve, 100))
         console.log('Executing paste via AppleScript')
         await execAsync(`osascript -e 'tell application "System Events" to keystroke "v" using command down'`)
+
+        // Enter キーを押す
+        if (autoEnter) {
+          await new Promise(resolve => setTimeout(resolve, 100))
+          await execAsync(`osascript -e 'tell application "System Events" to keystroke return'`)
+        }
         return { success: true }
       } else if (process.platform === 'win32') {
         // Windows: PowerShell + SendKeys
         const escaped = text
           .replace(/'/g, "''")
           .replace(/`/g, '``')
-        await execAsync(`powershell -Command "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('${escaped}')"`)
+        const enterKey = autoEnter ? '{ENTER}' : ''
+        await execAsync(`powershell -Command "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('${escaped}${enterKey}')"`)
         return { success: true }
       } else {
         // Linux: xdotool (if available)
         const escaped = text.replace(/'/g, "'\\''")
         await execAsync(`xdotool type '${escaped}'`)
+        if (autoEnter) {
+          await execAsync(`xdotool key Return`)
+        }
         return { success: true }
       }
     } catch (error) {

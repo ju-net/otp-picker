@@ -7,7 +7,7 @@ interface OTPListProps {
 }
 
 function OTPList({ onOpenSettings, isAuthenticated }: OTPListProps) {
-  const { otpEmails, setOtpEmails, loadSettings, inputMethod, autoRefresh, refreshInterval } = useSettingsStore()
+  const { otpEmails, setOtpEmails, loadSettings, inputMethod, autoEnterAfterType, autoRefresh, refreshInterval } = useSettingsStore()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -79,7 +79,7 @@ function OTPList({ onOpenSettings, isAuthenticated }: OTPListProps) {
       if (inputMethod === 'clipboard') {
         await window.electronAPI?.copyToClipboard(email.code)
       } else if (inputMethod === 'typing') {
-        await window.electronAPI?.typeText(email.code)
+        await window.electronAPI?.typeText(email.code, { autoEnter: autoEnterAfterType })
       } else {
         // 'ask' - for now, default to clipboard
         await window.electronAPI?.copyToClipboard(email.code)

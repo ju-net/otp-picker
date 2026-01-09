@@ -20,7 +20,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Input
   copyToClipboard: (text) => ipcRenderer.invoke('copy-to-clipboard', text),
-  typeText: (text) => ipcRenderer.invoke('type-text', text),
+  typeText: (text, options) => ipcRenderer.invoke('type-text', text, options),
 
   // Window
   hideWindow: () => ipcRenderer.invoke('hide-window'),
