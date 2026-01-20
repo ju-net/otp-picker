@@ -12,8 +12,44 @@ import { startOAuth, logout, checkAuthStatus, getOAuthClient } from './gmail/aut
 import { fetchOTPEmails } from './gmail/api'
 
 let mainWindow: BrowserWindow | null = null
+let previousApp: string | null = null // 前のアクティブアプリを記録
 
 const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL']
+
+// 現在のフロントアプリを取得
+async function getFrontmostApp(): Promise<string | null> {
+  const { exec } = await import('child_process')
+  const { promisify } = await import('util')
+  const execAsync = promisify(exec)
+
+  try {
+    if (process.platform === 'darwin') {
+      const { stdout } = await execAsync(`osascript -e 'tell application "System Events" to get name of first application process whose frontmost is true'`)
+      return stdout.trim()
+    }
+  } catch (error) {
+    console.error('Failed to get frontmost app:', error)
+  }
+  return null
+}
+
+// 前のアプリをアクティブにする
+async function activatePreviousApp(): Promise<void> {
+  if (!previousApp) return
+
+  const { exec } = await import('child_process')
+  const { promisify } = await import('util')
+  const execAsync = promisify(exec)
+
+  try {
+    if (process.platform === 'darwin') {
+      const escaped = previousApp.replace(/"/g, '\\"')
+      await execAsync(`osascript -e 'tell application "${escaped}" to activate'`)
+    }
+  } catch (error) {
+    console.error('Failed to activate previous app:', error)
+  }
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -66,8 +102,12 @@ function createWindow() {
   return mainWindow
 }
 
-function showWindow() {
+async function showWindow() {
   if (mainWindow) {
+    // 現在のフロントアプリを記録（OTP選択後にフォーカスを戻すため）
+    previousApp = await getFrontmostApp()
+    console.log('Previous app saved:', previousApp)
+
     // カーソルのある画面の中央に配置
     const cursorPoint = screen.getCursorScreenPoint()
     const activeDisplay = screen.getDisplayNearestPoint(cursorPoint)
@@ -200,11 +240,14 @@ app.whenReady().then(() => {
       }
     }
 
-    // Hide window first to focus on the previous app
+    // Hide window first
     mainWindow?.hide()
 
+    // 前のアプリをアクティブにしてフォーカスを戻す
+    await activatePreviousApp()
+
     // Small delay to let the previous window focus
-    await new Promise(resolve => setTimeout(resolve, 300))
+    await new Promise(resolve => setTimeout(resolve, 200))
 
     const { exec } = await import('child_process')
     const { promisify } = await import('util')
@@ -215,7 +258,7 @@ app.whenReady().then(() => {
         // macOS: クリップボード経由で Cmd+V をシミュレート
         clipboard.writeText(text)
         await new Promise(resolve => setTimeout(resolve, 100))
-        console.log('Executing paste via AppleScript')
+        console.log('Executing paste via AppleScript to:', previousApp)
         await execAsync(`osascript -e 'tell application "System Events" to keystroke "v" using command down'`)
 
         // Enter キーを押す

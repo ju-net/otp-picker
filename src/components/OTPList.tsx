@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useSettingsStore, OTPEmail } from '../store/settings'
 
 interface OTPListProps {
@@ -10,6 +10,8 @@ function OTPList({ onOpenSettings, isAuthenticated }: OTPListProps) {
   const { otpEmails, setOtpEmails, loadSettings, inputMethod, autoEnterAfterType, autoRefresh, refreshInterval } = useSettingsStore()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [selectedIndex, setSelectedIndex] = useState(0)
+  const listRef = useRef<HTMLDivElement>(null)
 
   const fetchEmails = useCallback(async () => {
     if (!isAuthenticated) return
@@ -49,8 +51,45 @@ function OTPList({ onOpenSettings, isAuthenticated }: OTPListProps) {
   useEffect(() => {
     window.electronAPI?.onShowWindow(() => {
       fetchEmails()
+      setSelectedIndex(0) // ウィンドウ表示時に選択をリセット
     })
   }, [fetchEmails])
+
+  // メール一覧が変更されたら選択をリセット
+  useEffect(() => {
+    setSelectedIndex(0)
+  }, [otpEmails])
+
+  // キーボードナビゲーション
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (otpEmails.length === 0) return
+
+      switch (e.key) {
+        case 'ArrowUp':
+          e.preventDefault()
+          setSelectedIndex(prev => (prev <= 0 ? otpEmails.length - 1 : prev - 1))
+          break
+        case 'ArrowDown':
+          e.preventDefault()
+          setSelectedIndex(prev => (prev >= otpEmails.length - 1 ? 0 : prev + 1))
+          break
+        case 'Enter':
+          e.preventDefault()
+          if (otpEmails[selectedIndex]) {
+            handleSelectOTP(otpEmails[selectedIndex])
+          }
+          break
+        case 'Escape':
+          e.preventDefault()
+          handleClose()
+          break
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [otpEmails, selectedIndex])
 
   const handleLogin = async () => {
     console.log('handleLogin called')
@@ -106,8 +145,9 @@ function OTPList({ onOpenSettings, isAuthenticated }: OTPListProps) {
           <div className="flex items-center gap-2 no-drag">
             <button
               onClick={onOpenSettings}
-              className="text-gray-500 hover:text-gray-700"
+              className="text-gray-500 hover:text-gray-700 outline-none focus:outline-none"
               title="設定"
+              tabIndex={-1}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -116,8 +156,9 @@ function OTPList({ onOpenSettings, isAuthenticated }: OTPListProps) {
             </button>
             <button
               onClick={handleClose}
-              className="text-gray-500 hover:text-gray-700"
+              className="text-gray-500 hover:text-gray-700 outline-none focus:outline-none"
               title="閉じる"
+              tabIndex={-1}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -153,8 +194,9 @@ function OTPList({ onOpenSettings, isAuthenticated }: OTPListProps) {
           <button
             onClick={fetchEmails}
             disabled={isLoading}
-            className="text-gray-500 hover:text-gray-700 disabled:opacity-50"
+            className="text-gray-500 hover:text-gray-700 disabled:opacity-50 outline-none focus:outline-none"
             title="更新"
+            tabIndex={-1}
           >
             <svg className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -162,8 +204,9 @@ function OTPList({ onOpenSettings, isAuthenticated }: OTPListProps) {
           </button>
           <button
             onClick={onOpenSettings}
-            className="text-gray-500 hover:text-gray-700"
+            className="text-gray-500 hover:text-gray-700 outline-none focus:outline-none"
             title="設定"
+            tabIndex={-1}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -172,8 +215,9 @@ function OTPList({ onOpenSettings, isAuthenticated }: OTPListProps) {
           </button>
           <button
             onClick={handleClose}
-            className="text-gray-500 hover:text-gray-700"
+            className="text-gray-500 hover:text-gray-700 outline-none focus:outline-none"
             title="閉じる"
+            tabIndex={-1}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -188,7 +232,7 @@ function OTPList({ onOpenSettings, isAuthenticated }: OTPListProps) {
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto -mx-1 px-1">
         {otpEmails.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-gray-500">
@@ -196,12 +240,17 @@ function OTPList({ onOpenSettings, isAuthenticated }: OTPListProps) {
             </p>
           </div>
         ) : (
-          <div className="space-y-2">
-            {otpEmails.map((email) => (
+          <div className="space-y-2 py-1" ref={listRef}>
+            {otpEmails.map((email, index) => (
               <button
                 key={email.id}
                 onClick={() => handleSelectOTP(email)}
-                className="w-full text-left p-3 bg-white/50 border border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                tabIndex={-1}
+                className={`w-full text-left p-3 bg-white/50 border rounded-lg transition-colors outline-none focus:outline-none ${
+                  index === selectedIndex
+                    ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-300'
+                    : 'border-gray-200 hover:border-blue-500 hover:bg-blue-50'
+                }`}
               >
                 <div className="flex justify-between items-start">
                   <div className="flex-1 min-w-0">
