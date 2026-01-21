@@ -33,14 +33,32 @@ export function initAutoUpdater(window: BrowserWindow) {
     }).then((result) => {
       if (result.response === 0) {
         console.log('Starting download...')
+        mainWindow?.webContents.send('update-status', {
+          status: 'downloading',
+          message: 'アップデートをダウンロード中...'
+        })
         autoUpdater.downloadUpdate().then(() => {
           console.log('Download started successfully')
         }).catch((err) => {
           console.error('Download failed to start:', err)
-        })
-        mainWindow?.webContents.send('update-status', {
-          status: 'downloading',
-          message: 'アップデートをダウンロード中...'
+          mainWindow?.webContents.send('update-status', {
+            status: 'error',
+            message: 'ダウンロードの開始に失敗しました'
+          })
+          // ダウンロード失敗時にエラー詳細を表示して手動ダウンロードを促す
+          dialog.showMessageBox(mainWindow!, {
+            type: 'error',
+            title: 'ダウンロードエラー',
+            message: '自動ダウンロードを開始できませんでした。\n\n手動でダウンロードページからインストールしてください。',
+            detail: `エラー内容:\n${err.message || err}`,
+            buttons: ['ダウンロードページを開く', '閉じる'],
+            defaultId: 0,
+            cancelId: 1,
+          }).then((dialogResult) => {
+            if (dialogResult.response === 0) {
+              shell.openExternal(RELEASES_URL)
+            }
+          })
         })
       }
     })
